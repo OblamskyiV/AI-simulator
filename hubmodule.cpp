@@ -1,7 +1,6 @@
 #include "hubmodule.h"
 #include "servant.h"
 #include <cmath>
-#include <QDebug>
 
 ModellingSystem * HubModule::modellingSystem = NULL;
 double* HubModule::idleTime = NULL;
@@ -33,10 +32,61 @@ void HubModule::refresh()
         switch (m->type) {
         case MsgMove:
         {
-            qDebug() << "test";
             MessageMove *messageMove = static_cast<MessageMove *>(m);
-            HubModule::modellingSystem->getRobotByPort(messageMove->port)
-                    ->setCoords(messageMove->coordX, messageMove->coordY);
+
+            // check if there'll be no collisions
+            bool collision = false;
+
+            Robot* tmpClientRobot = HubModule::modellingSystem
+                    ->getRobotByPort(messageMove->port);
+
+            // check for collisions with robots
+            for (int i = 0; i < ROBOTS; i++) {
+                Robot* tmpRobot = HubModule::modellingSystem->getRobot(i);
+                // if the current robot is the sender robot
+                // then make the next loop
+                if (tmpRobot->getPortNumber() == messageMove->port)
+                    continue;
+
+                // check if distance between two points is
+                // bigger then robots size sum
+                if (sqrt(
+                            pow(messageMove->coordX
+                                - tmpRobot->getCoords().first, 2)
+                            +
+                            pow(messageMove->coordY
+                                - tmpRobot->getCoords().second, 2)
+                            ) < (tmpRobot->getSize() + tmpClientRobot->getSize())
+                        )
+                    collision = true;
+            }
+            // check for collisions with env objects
+            for (int i = 0; i < ROBOTS; i++) {
+                EnvObject* tmpEnvObject = HubModule::modellingSystem->getEnvObject(i);
+                // check if distance between two points is
+                // bigger then robots size sum
+                if (sqrt(
+                            pow(messageMove->coordX
+                                - tmpEnvObject->getCoords().first, 2)
+                            +
+                            pow(messageMove->coordY
+                                - tmpEnvObject->getCoords().second, 2)
+                            ) < (tmpEnvObject->getSize() + tmpClientRobot->getSize())
+                        )
+                    collision = true;
+            }
+
+            if (!collision)
+                HubModule::modellingSystem->getRobotByPort(messageMove->port)
+                        ->setCoords(messageMove->coordX, messageMove->coordY);
+            else {
+                MessageBump *messageBump = new MessageBump();
+                messageBump->port = messageMove->port;
+                // set current robot coords
+                messageBump->coordX = tmpClientRobot->getCoords().first;
+                messageBump->coordY = tmpClientRobot->getCoords().second;
+                comModule->sendMessage(messageBump);
+            }
         }
             break;
 
@@ -44,11 +94,8 @@ void HubModule::refresh()
         {
             MessageTurn *messageTurn = static_cast<MessageTurn *>(m);
 
-            double prevOrientation = HubModule::modellingSystem->getRobotByPort(messageTurn->port)
-                    ->getOrientation();
-
             HubModule::modellingSystem->getRobotByPort(messageTurn->port)
-                    ->setOrientation(prevOrientation + messageTurn->degrees);
+                    ->setOrientation(messageTurn->degrees);
         }
             break;
 
@@ -117,7 +164,7 @@ void HubModule::refresh()
                     // set diameter
                     messageObject.diameter = robot->getSize();
                     // set orientation
-                    messageObject.seconds = robot->getOrientation();
+                    messageObject.degrees = robot->getOrientation();
 
                     objectsInRange.push_front(messageObject);
 
@@ -159,7 +206,7 @@ void HubModule::refresh()
                     // set diameter
                     messageObject.diameter = envObject->getSize();
                     // set orientation
-                    messageObject.seconds = envObject->getOrientation();
+                    messageObject.degrees = envObject->getOrientation();
 
                     objectsInRange.push_front(messageObject);
                     // FIXME: messageObject destructor here
@@ -167,7 +214,22 @@ void HubModule::refresh()
             }
 
             messageThereYouSee->objects = objectsInRange;
+            messageThereYouSee->port = messageWhoIsThere->port;
+            comModule->sendMessage(messageThereYouSee);
             // send message to robot
+        }
+            break;
+
+        case MsgParameterReport:
+        {
+            MessageParameterReport *messageParameterReport
+                    = static_cast<MessageParameterReport *>(m);
+
+            double paramValue = messageParameterReport->integral + messageParameterReport->real
+                    / 1000000;
+
+            HubModule::modellingSystem->getRobotByPort(messageParameterReport->port)
+                    ->setParametersByID(messageParameterReport->id, paramValue);
         }
             break;
 

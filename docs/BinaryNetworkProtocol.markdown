@@ -23,7 +23,7 @@ be either some dull message (see "`acknowledge` message") or answer to
 the question that agent asked (see "`there you see` message" and "`bump`
 message").
 
-There are 9 types of messages:
+There are 12 types of messages:
 
 * `move`
 * `turn`
@@ -34,9 +34,12 @@ There are 9 types of messages:
 * `acknowledge`
 * `bump`
 * `there you see`
+* `start`
+* `pause`
+* `stop`
 
-Out of those, only first 6 can be sent by agent, and the last three
-can be sent only by the simulator.
+Out of those, only first 6 can be sent by agent, and the last six can
+be sent only by the simulator.
 
 Following are formal specification of how does header and each message
 type look like.
@@ -68,6 +71,9 @@ Message types are mapped from names to numbers as follows:
 * 6: `bump`
 * 7: `there you see`
 * 8: `parameter report`
+* 9: `start`
+* 10: `pause`
+* 11: `stop`
 
 ## `move` message
 
@@ -86,9 +92,9 @@ Message contains:
 
 * seconds, *4 octets*, signed integer
 
-seconds are 1/60 of minute, and minute is in turn 1/60 of degree.  That
-field specify number of seconds agent should turn clockwise.  To turn
-counterclockwise, one should specify negative number of seconds.
+second is 1/60 of minute, and minute is, in turn, 1/60 of degree. That
+field specify new orientation of the agent. It is an absolute value
+counted from the north direction, which is at the top of the map.
 
 ## `change size` message
 
@@ -178,6 +184,16 @@ Seconds field indidates orientation of object.
 
 List of objects is just a stream of objects descriptions.
 
+## `start`, `pause` and `stop` messages
+
+Those are used to control simulation flow. Agent program should start
+doing its work (i.e. moving agent around) upon receiving `start`
+message. If `pause` is sent, agent should pause and wait for the
+`start`. The only difference between `pause` and `stop` is that
+pausing doesn't erase current agent's state, while `stop` does.
+
+Those messages doesn't contain anything other than header.
+
 ## Example messages
 
 ### `move` message
@@ -232,6 +248,7 @@ List of objects is just a stream of objects descriptions.
 0x00 0x00 0x00 0x10   --     x coordinate, 16
 0x00 0x00 0x00 0x12   --     y coordinate, 18
 0x00 0x00 0x00 0x15   --     diameter, 21
+0x00 0x00 0x01 0x68   --     seconds, 360 (one degree)
 0x7f                  --     red component, 127
 0xda                  --     green component, 218
 0x3d                  --     blue component, 61
@@ -239,6 +256,7 @@ List of objects is just a stream of objects descriptions.
 0x00 0x00 0x00 0x5d   --     x coordinate, 93
 0x00 0x00 0x09 0x2a   --     y coordinate, 2346
 0x00 0x00 0x00 0x03   --     diameter, 3
+0x00 0x01 0xa5 0xe0   --     seconds, 108000 (30 degrees)
 0x05                  --     red component, 5
 0x07                  --     green component, 7
 0x0b                  --     blue component, 11
@@ -246,6 +264,7 @@ List of objects is just a stream of objects descriptions.
 0x00 0x0d 0xa6 0x3b   --     x coordinate, 894523
 0x00 0x08 0xa7 0xfb   --     y coordinate, 567291
 0x00 0x00 0x08 0x6c   --     diameter, 2165
+0x00 0x03 0x4b 0xc0   --     seconds, 216000 (60 degrees)
 0x5c                  --     red component, 92
 0x41                  --     green component, 65
 0x04                  --     blue component, 4
