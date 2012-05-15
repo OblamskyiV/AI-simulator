@@ -45,7 +45,7 @@ void ComModule::handleMessage()
 
         quint8 version;
         stream >> version;
-        if(version != 2) {
+        if (version != 3) {
             // FIXME: stick qDebug in here
             // VERSION MISMATCH, CAN'T HANDLE THAT
             return;
@@ -104,8 +104,8 @@ void ComModule::sendMessage(Message *msg)
     /* Use QDataStream to populate datagram with data because it would handle endianness for us */
     QDataStream stream(&datagram, QIODevice::WriteOnly);
 
-    // version: 2
-    stream << static_cast<quint8>(2);
+    // version: 3
+    stream << static_cast<quint8>(3);
     // other header infortmation
     stream << static_cast<quint32>(msg->num)
            << static_cast<quint8>(msg->envObjID)
@@ -120,7 +120,9 @@ void ComModule::sendMessage(Message *msg)
     case MsgBump:
         {
         MessageBump *m = static_cast<MessageBump *>(msg);
-        stream << static_cast<quint32>(m->coordX) << static_cast<quint32>(m->coordY);
+        stream << static_cast<quint32>(m->coordX)
+               << static_cast<quint32>(m->coordY)
+               << static_cast<quint32>(m->objectSize);
         };
         break;
     case MsgThereYouSee:
