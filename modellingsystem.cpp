@@ -24,8 +24,8 @@ ModellingSystem::~ModellingSystem()
 {
     delete world;
 
-    for (unsigned int i = 0; i < robots.size(); i++)
-        delete robots.at(i);
+//    for (unsigned int i = 0; i < robots.size(); i++)
+//        delete robots.at(i);
 
     for (unsigned int i = 0; i < envObjects.size(); i++)
         delete envObjects.at(i);

@@ -60,7 +60,7 @@ void HubModule::refresh()
 
             // check for collisions with robots
             MessageBump *messageBump = new MessageBump();
-
+            int tmpSize = 0;
             for (int i = 0; i < ROBOTS; i++) {
                 Robot* tmpRobot = HubModule::modellingSystem->getRobot(i);
                 // if the current robot is the sender robot
@@ -82,16 +82,19 @@ void HubModule::refresh()
                             ) < (tmpRobot->getSize() / 2 + object->getSize() / 2)
                         ) {
                     collision = true;
+                    tmpSize = tmpRobot->getSize();
                     // send message to collided robot
                     messageBump->port = tmpRobot->getPortNumber();
                     // just dummy
                     messageBump->num = 0;
                     // why 0? read envObjID specification
                     messageBump->envObjID = 0;
+                    messageBump->objectSize = object->getSize();
                     // set collided robot coords
+//                    qDebug() << "Collided robot: " << messageBump->envObjID;
                     messageBump->coordX = tmpRobot->getCoords().first;
                     messageBump->coordY = tmpRobot->getCoords().second;
-                    comModule->sendMessage(messageBump);
+ //                   comModule->sendMessage(messageBump);
                 }
             }
             // check for collisions with env objects
@@ -115,16 +118,21 @@ void HubModule::refresh()
                             ) < (tmpEnvObject->getSize() / 2 + object->getSize() / 2)
                         ) {
                     collision = true;
+                    tmpSize = tmpEnvObject->getSize();
                     // send message to collided env object
                     messageBump->port = tmpEnvObject->getPortNumber();
                     // just dummy
                     messageBump->num = 0;
                     // why +1? read envObjID specification
                     messageBump->envObjID = i + 1;
+
+                    messageBump->objectSize = object->getSize();
                     // set collided env object coords
                     messageBump->coordX = tmpEnvObject->getCoords().first;
                     messageBump->coordY = tmpEnvObject->getCoords().second;
-                    comModule->sendMessage(messageBump);
+                    HubModule::modellingSystem->getEnvObject(i)->setSize(0);
+ //                   qDebug() << "Collided env obj: " << messageBump->envObjID;
+ //                   comModule->sendMessage(messageBump);
                 }
             }
 
@@ -139,10 +147,19 @@ void HubModule::refresh()
                 messageBump->port = messageMove->port;
                 messageBump->envObjID = messageMove->envObjID;
                 messageBump->num = messageMove->num;
+                messageBump->objectSize = tmpSize;
+
                 // set current robot coords
                 messageBump->coordX = object->getCoords().first;
                 messageBump->coordY = object->getCoords().second;
 
+                qDebug() << "Port: " << messageBump->port;
+                qDebug() << "EnvObjID: " << messageBump->envObjID;
+                qDebug() << "num: " << messageBump->num;
+                qDebug() << "objectSize: " << messageBump->objectSize;
+                qDebug() << "CoordX: " << messageBump->coordX;
+                qDebug() << "CoordY: " << messageBump->coordY;
+                qDebug() << "=====================================";
                 comModule->sendMessage(messageBump);
             }
         }
